@@ -22,7 +22,7 @@ linmodEst <- function(x, y) {
   ## degrees of freedom and standard deviation of residuals
   df <- nrow(x) - ncol(x)
   sigma2 <- sum((y - x %*% coef) ^ 2) / df
-  ## compute sigma^2 * (x’x)^-1
+  ## compute sigma^2 * (x???x)^-1
   vcov <- sigma2 * solve(t(x) %*% x)
   colnames(vcov) <- rownames(vcov) <- colnames(x)
   list(
@@ -31,4 +31,35 @@ linmodEst <- function(x, y) {
     sigma = sqrt(sigma2),
     df = df
   )
+}
+
+linmod <- function(x, ...)
+  UseMethod("linmod")
+
+linmod.default <- function(x, y, ...) {
+  x <- as.matrix(x)
+  y <- as.numeric(y)
+  est <- linmodEst(x, y)
+  est$fitted.values <- as.vector(x %*% est$coefficients)
+  est$residuals <- y - est$fitted.values
+  est$call <- match.call()
+  class(est) <- "linmod"
+  return(est)
+}
+
+print.linmod <- function(x, ...) {
+  cat("Call:\n")
+  print(x$call)
+  cat("\nCoefficients:\n")
+  print(x$coefficients)
+}
+
+linmod.formula <- function(formula, data = list(), ...) {
+  mf <- model.frame(formula = formula, data = data)
+  x <- model.matrix(attr(mf, "terms"), data = mf)
+  y <- model.response(mf)
+  est <- linmod.default(x, y, ...)
+  est$call <- match.call()
+  est$formula <- formula
+  return(est)
 }
